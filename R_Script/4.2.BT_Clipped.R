@@ -1,0 +1,35 @@
+#Author Name: Ibrahim Khalil
+#Date: 10.09.2025
+#Content Name: Clip BT with AOI shapefile
+#--------------------------------------------
+
+
+library(terra)
+
+# Paths
+root   <- "E:/Course&Class/SFRS"
+in_bt  <- file.path(root, "_toa_radiance_masked")
+out_bt <- file.path(root, "_bt_clipped"); dir.create(out_bt, FALSE, TRUE)
+
+# AOI
+aoi <- vect(file.path(root, "n_shapefile", "AOI.shp"))
+
+# Scene folders
+scenes <- list.dirs(in_bt, recursive = FALSE, full.names = FALSE)
+scenes <- scenes[grepl("^20", scenes)]
+
+for (scn in scenes) {
+  btf <- list.files(file.path(in_bt, scn),
+                    pattern = "_BT\\.(tif|TIF)$",
+                    full.names = TRUE, ignore.case = TRUE)
+  if (!length(btf)) next
+  
+  BT <- rast(btf[1])                  # Kelvin
+  BT_clip <- mask(crop(BT, aoi), aoi)
+  
+  od <- file.path(out_bt, scn); dir.create(od, FALSE, TRUE)
+  out_file <- file.path(od, paste0(scn, "_BT_clipped.tif"))
+  writeRaster(BT_clip, out_file, overwrite = TRUE,
+              wopt = list(datatype = "FLT4S",
+                          gdal = c("COMPRESS=LZW","TILED=YES","BIGTIFF=YES")))
+}
